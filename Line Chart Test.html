@@ -38,95 +38,86 @@
     <div id="line_top_x"></div>
   </div>
 
-  <!-- scripts section -->
-
  <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
  <script type="text/javascript">
-
   function buildTable() {
+
+    // store the api's url
     var url = "https://datausa.io/api/data?drilldowns=State&measures=Population";
   
-  // request data from api, then fill in table with response
-  fetch(url)
-  .then(data => {return data.json()})
-  .then(response => {
+    // request data from api, then fill in table with response
+    fetch(url)
+    .then(data => {return data.json()})
+    .then(response => {
 
-    // create array from checked items
-    var checkboxes = document.querySelectorAll("input[type=checkbox]");
-    var states = [];
+      // create array from checked states
+      var checkboxes = document.querySelectorAll("input[type=checkbox]");
+      var states = [];
+      for (var i = 0; i < checkboxes.length; i++) 
+        if (checkboxes[i].checked) states.push(checkboxes[i].value);
+      
+      // check edge case, if no states were selected
+      if (states.length == 0) return;
 
-    for (var i = 0; i < checkboxes.length; i++) {
-      if (checkboxes[i].checked) states.push(checkboxes[i].value);
-    }
+      // this code was provided by google for creating the line chart
+      google.charts.load('current', {'packages':['line']});
+      google.charts.setOnLoadCallback(drawChart);
 
-    // check edge case, if no states were selected
-    if (states.length == 0) return;
+      function drawChart() {
+        var dataTable = new google.visualization.DataTable();
+        dataTable.addColumn('string', 'Year');
 
-    google.charts.load('current', {'packages':['line']});
-    google.charts.setOnLoadCallback(drawChart);
+        // add all the states, this is done backwards since the response
+        // starts with 2019
+        for (var i = states.length - 1; i >= 0; i--) 
+          dataTable.addColumn('number', states[i]);
+        
+        // create pointer for iterating over response array
+        var ptr = response.data.length - 1;
 
-    function drawChart() {
+        while (ptr >= 0) {
+          // create a new array for the current row
+          var row = [];
 
-      var dataTable = new google.visualization.DataTable();
-      dataTable.addColumn('string', 'Year');
+          while (row.length <= states.length && ptr >= 0) {
+            // check if the current state is in the states array
+            if (states.includes(response.data[ptr].State) && !row.includes(response.data[ptr].State)) {
 
-      // add all the states, this is done backwards since the response
-      // starts with 2019
-      for (var i = states.length - 1; i >= 0; i--) {
-        dataTable.addColumn('number', states[i]);
-      }
-
-      //states.forEach(state => dataTable.addColumn('number', state));
-
-      // create variables for iterating over response array
-      var ptr = response.data.length - 1;
-
-      while (ptr >= 0) {
-        // create a new array for the current row
-        var row = [];
-
-        while (row.length <= states.length && ptr >= 0) {
-          // check if the current state is in the states array
-          if (states.includes(response.data[ptr].State) && !row.includes(response.data[ptr].State)) {
-            // check if the year needs to be added to the current row
-            if (row.length == 0) {
-              row.push(response.data[ptr].Year);
+              // check if the year needs to be added to the current row
+              if (row.length == 0) row.push(response.data[ptr].Year);
+              
+              row.push(response.data[ptr].Population);
             }
-            row.push(response.data[ptr].Population);
+            ptr--;
           }
-          ptr--;
+
+          // add row to chart, then reset it
+          if (row.length - 1 == states.length) 
+            dataTable.addRow(row);
         }
 
-        // add row to chart, then reset it
-        if (row.length - 1 == states.length) {
-          dataTable.addRow(row);
-          console.log("added " + row);
-        }
+        var options = {
+          chart: {
+            title: 'Population for selected states from 2013 to 2019'
+          },
+          width: 900,
+          height: 500,
+          axes: {
+            x: {
+              0: {side: 'top'}
+            }
+          }
+        };
+
+        var chart = new google.charts.Line(document.getElementById('line_top_x'));
+        chart.draw(dataTable, google.charts.Line.convertOptions(options));
       }
-
-      var options = {
-        chart: {
-          title: 'National Population for the United States from 2013 to 2019'
-        },
-        width: 900,
-        height: 500,
-        axes: {
-          x: {
-            0: {side: 'top'}
-          }
-        }
-      };
-
-      var chart = new google.charts.Line(document.getElementById('line_top_x'));
-      chart.draw(dataTable, google.charts.Line.convertOptions(options));
-    }
-  })
+    })
   }
   
  </script>
-
 </body>
 </html>
