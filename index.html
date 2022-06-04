@@ -1,0 +1,123 @@
+<html>
+<head>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+</head>
+<body>
+  <div class="pt-2 pl-2 pb-2">
+    <div class="dropdown">
+      <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="width: 150px">
+        Select States
+      </button>
+      <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+        <div class="pl-3">
+          <input type="checkbox" id="Alaska" name="Alaska" value="Alaska"><label class="pl-1">Alaska</label>
+        </div>
+        <div class="pl-3">
+          <input type="checkbox" id="California" name="California" value="California"><label class="pl-1">California</label>
+        </div>
+        <div class="pl-3">
+          <input type="checkbox" id="Colorado" name="Colorado" value="Colorado"><label class="pl-1">Colorado</label>
+        </div>
+        <div class="pl-3">
+          <input type="checkbox" id="Hawaii" name="Hawaii" value="Hawaii"><label class="pl-1">Hawaii</label>
+        </div>
+        <div class="pl-3">
+          <input type="checkbox" id="Indiana" name="Indiana" value="Indiana"><label class="pl-1">Indiana</label>
+        </div>
+        <div class="pl-3">
+          <input type="checkbox" id="New York" name="New York" value="New York"><label class="pl-1">New York</label>
+        </div>
+        <div class="pl-3">
+          <input type="checkbox" id="Oregon" name="Oregon" value="Oregon"><label class="pl-1">Oregon</label>
+        </div>
+      </div>
+    <button type="submit" class="btn btn-primary" style="width: 150px" onclick="buildTable()">Build Chart</button>
+    </div>
+  </div>
+  <div class="pl-2">
+    <div id="line_top_x"></div>
+  </div>
+
+ <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+ <script src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+ <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+ <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+ <script type="text/javascript">
+  function buildTable() {
+
+    // store the api's url
+    var url = "https://datausa.io/api/data?drilldowns=State&measures=Population";
+  
+    // request data from api, then fill in table with response
+    fetch(url)
+    .then(data => {return data.json()})
+    .then(response => {
+
+      // create array from checked states
+      var checkboxes = document.querySelectorAll("input[type=checkbox]");
+      var states = [];
+      for (var i = 0; i < checkboxes.length; i++) 
+        if (checkboxes[i].checked) states.push(checkboxes[i].value);
+      
+      // check edge case, if no states were selected
+      if (states.length == 0) return;
+
+      // this code was provided by google for creating the line chart
+      google.charts.load('current', {'packages':['line']});
+      google.charts.setOnLoadCallback(drawChart);
+
+      function drawChart() {
+        var dataTable = new google.visualization.DataTable();
+        dataTable.addColumn('string', 'Year');
+
+        // add all the states, this is done backwards since the response
+        // starts with 2019
+        for (var i = states.length - 1; i >= 0; i--) 
+          dataTable.addColumn('number', states[i]);
+        
+        // create pointer for iterating over response array
+        var ptr = response.data.length - 1;
+
+        while (ptr >= 0) {
+          // create a new array for the current row
+          var row = [];
+
+          while (row.length <= states.length && ptr >= 0) {
+            // check if the current state is in the states array
+            if (states.includes(response.data[ptr].State) && !row.includes(response.data[ptr].State)) {
+
+              // check if the year needs to be added to the current row
+              if (row.length == 0) row.push(response.data[ptr].Year);
+              
+              row.push(response.data[ptr].Population);
+            }
+            ptr--;
+          }
+
+          // add row to chart, then reset it
+          if (row.length - 1 == states.length) 
+            dataTable.addRow(row);
+        }
+
+        var options = {
+          chart: {
+            title: 'Population for selected states from 2013 to 2019'
+          },
+          width: 900,
+          height: 500,
+          axes: {
+            x: {
+              0: {side: 'top'}
+            }
+          }
+        };
+
+        var chart = new google.charts.Line(document.getElementById('line_top_x'));
+        chart.draw(dataTable, google.charts.Line.convertOptions(options));
+      }
+    })
+  }
+  
+ </script>
+</body>
+</html>
